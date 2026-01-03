@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS generation_tasks;
+DROP TABLE IF EXISTS user_progress;
+DROP TABLE IF EXISTS lessons;
+DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS documents;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS users;

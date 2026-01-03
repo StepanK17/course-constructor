@@ -1,0 +1,110 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: course_constructor
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio:/data
+
+  migrate:
+    image: migrate/migrate:v4.18.1
+    depends_on:
+      - db
+    volumes:
+      - ./migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://postgres:postgres@db:5432/course_constructor?sslmode=disable"
+      - "up"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+      - redis
+      - minio
+      - migrate
+    environment:
+      APP_PORT: 8080
+      DB_DSN: postgres://postgres:postgres@db:5432/course_constructor?sslmode=disable
+      REDIS_ADDR: redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_BUCKET: course-constructor
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+      JWT_SECRET: dev_secret_change_me
+      JWT_ISSUER: course-constructor
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 168h
+      MAX_FILES_PER_USER: 20
+      MAX_TOTAL_MB: 100
+      MAX_FILE_MB: 50
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+      - redis
+      - backend
+      - migrate
+    environment:
+      DB_DSN: postgres://postgres:postgres@db:5432/course_constructor?sslmode=disable
+      REDIS_ADDR: redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_BUCKET: course-constructor
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+      JWT_SECRET: dev_secret_change_me
+      JWT_ISSUER: course-constructor
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 168h
+      MAX_FILES_PER_USER: 20
+      MAX_TOTAL_MB: 100
+      MAX_FILE_MB: 50
+      CORS_ORIGINS: http://localhost:5173
+    command: ["/bin/worker"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+volumes:
+  dbdata:
+  minio:

@@ -1,0 +1,29 @@
+# Node
+node_modules/
+dist/
+.vite/
+
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Env/local
+.env
+.env.*
+.DS_Store
+
+# Logs
+*.log
+
+# Editor
+.idea/
+.vscode/
+
+# Local test artifacts
+tmp_upload.md
