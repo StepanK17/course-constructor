@@ -160,4 +160,3 @@ ai-worker:
 ### Источники
 - ...
 ```
-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
