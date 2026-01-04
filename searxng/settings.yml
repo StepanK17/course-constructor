@@ -1,0 +1,12 @@
+use_default_settings: true
+server:
+  public_instance: false
+  limiter: false
+  secret_key: "change-me-in-production"
+  bind_address: "0.0.0.0"
+ui:
+  static_use_hash: true
+botdetection:
+  ip_limit:
+    filter: false
+  ip_lists: false

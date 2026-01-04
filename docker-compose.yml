@@ -15,6 +15,22 @@ services:
     ports:
       - "6379:6379"
 
+  qdrant:
+    image: qdrant/qdrant:v1.11.5
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant:/qdrant/storage
+
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8082
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -68,33 +84,39 @@ services:
     ports:
       - "8080:8080"
 
-  worker:
+  ai-worker:
     build:
-      context: .
+      context: ./ai-worker
       dockerfile: Dockerfile
     depends_on:
       - db
       - redis
-      - backend
-      - migrate
+      - qdrant
+      - searxng
     environment:
       DB_DSN: postgres://postgres:postgres@db:5432/course_constructor?sslmode=disable
       REDIS_ADDR: redis:6379
+      REDIS_DB: 0
+      MODEL_EMBEDDING: sentence-transformers/all-MiniLM-L6-v2
       S3_ENDPOINT: minio:9000
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio123
       S3_BUCKET: course-constructor
-      S3_REGION: us-east-1
       S3_USE_SSL: "false"
-      JWT_SECRET: dev_secret_change_me
-      JWT_ISSUER: course-constructor
-      ACCESS_TOKEN_TTL: 15m
-      REFRESH_TOKEN_TTL: 168h
-      MAX_FILES_PER_USER: 20
-      MAX_TOTAL_MB: 100
-      MAX_FILE_MB: 50
-      CORS_ORIGINS: http://localhost:5173
-    command: ["/bin/worker"]
+      QDRANT_URL: http://qdrant:6333
+      SEARXNG_URL: http://searxng:8080
+      MAX_NEW_TOKENS: 1000
+      TEMPERATURE: 0.5
+      DO_SAMPLE: "false"
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: deepseek/deepseek-chat
+      OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+      OPENROUTER_APP_NAME: course-constructor
+      OPENROUTER_REFERER: http://localhost
+      OPENROUTER_REASONING_FALLBACK: "true"
+      OPENROUTER_REASONING_MAX_TOKENS: 128
+    volumes:
+      - model-cache:/cache
 
   frontend:
     build:
@@ -108,3 +130,5 @@ services:
 volumes:
   dbdata:
   minio:
+  qdrant:
+  model-cache:
